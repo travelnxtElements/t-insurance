@@ -109,7 +109,7 @@
         </template>
         <div class="section travelguard-detail">
             <div class="insurance-section insurance-logo-section">
-                <img class="insurance-logo" src="../../../../Themes/img/travel-guard.png" />
+                <img class="insurance-logo" src="[[bannerImage]]" />
             </div>
             <div class="insurance-section">
                 Add travel insurance and travel worry-free! If you prefer NOT 
@@ -180,338 +180,353 @@
             </div>
         </div>
         <t-faredetails id="fareDetails" data="[[fareDetail]]" passenger-details="[[passengerDetails]]"></t-faredetails>
-        <iron-ajax id="countryCall" method="GET" verbose headers='{"accept": "application/json"}' handle-as="json" content-type="application/json" last-response="{{countries}}"></iron-ajax>
+        <iron-ajax id="countryCall" method="GET" verbose headers='{"accept": "application/json"}' handle-as="json" content-type="application/json" on-response="_setCountries"></iron-ajax>
         <iron-ajax id="statesCall" method="GET" verbose headers='{"accept": "application/json"}' handle-as="json" content-type="application/json" on-response="_statesChanged"></iron-ajax>
         <iron-ajax id="insuranceCall" method="POST" verbose headers='{"accept": "application/json"}' handle-as="json" content-type="application/json" on-response="_insuranceQuoteChanged"></iron-ajax>
     </template>
 </dom-module>
 <script>
-Polymer({
+    Polymer({
 
-    is: 't-insurance',
+        is: 't-insurance',
 
-    properties: {
+        properties: {
 
-        baseGeoApi: {
-            type: String,
-            value: "",
-            notify: true
+            baseGeoApi: {
+                type: String,
+                value: "",
+                notify: true
+            },
+
+            bannerImage:String,
+
+            _countryIndex: Number,
+
+            _stateIndex: Number,
+
+            insuranceApi: {
+                type: String,
+                value: "",
+                notify: true
+            },
+
+            countries: {
+                type: Object,
+                value: null
+            },
+
+            states: {
+                type: Object,
+                value: function () {
+                    return null;
+                }
+            },
+
+            passengerDetails: {
+                type: Object
+            },
+
+            fareDetail: {
+                type: Array,
+                value: function () {
+                    return []
+                }
+            },
+
+            insurance: {
+                type: Object,
+                value: function () {
+                    return null;
+                },
+                notify: true
+            },
+
+            state: {
+                type: String,
+                notify: true,
+                observer: '_stateSelectedChanged'
+            },
+
+            hasStates: {
+                type: Boolean,
+                value: false
+            },
+
+            notEligibleInsurance: {
+                type: Boolean,
+                value: false
+            },
+            countryApi: {
+                type: String,
+                value: "",
+                notify: true
+            },
+
+            hasInsurance: {
+                type: Boolean,
+                value: false
+            },
+
+            removeInsurance: {
+                type: Boolean,
+                value: false
+            },
+
+            inventoryId: String,
+
+            country: {
+                type: String,
+                notify: true,
+                observer: '_countryChanged'
+            },
+
+            insuranceFareDetails: {
+                type: Object,
+                value: function () {
+                    return null;
+                },
+                notify: true
+
+            },
+
+            _archivedFareDetails: Object,
+
+            queryParams: {
+                type: String,
+                notify: true
+            }
+
         },
 
-        _countryIndex: Number,
-
-        _stateIndex: Number,
-
-        insuranceApi: {
-            type: String,
-            value: "",
-            notify: true
+        ready: function () {
+            var component = this;
+            this.$.countryCall.url = this.countryApi + this.queryParams;
+            component.$.countryCall.generateRequest();
         },
 
-        countries: {
-            type: Object,
-            value: null
+        _addInsurance: function (event) {
+            this.$$('#removeInsurance').checked = false;
+            this.$.fareDetails.data = this.insuranceFareDetails;
         },
 
-        states: {
-            type: Object,
-            value: function() {
-                return null;
+        _setCountries: function (event) {
+            this.countries = event.detail.response;
+            var component = this;
+            setTimeout(function () {
+                component.fire('countries-populated');
+            }, 0);
+        },
+
+        _removeInsurance: function (event) {
+            this.$$('#hasInsurance').checked = false;
+            this.$.fareDetails.data = this._archivedFareDetails;
+        },
+
+        _addLoader: function () {
+            this.$.spinner.hidden = false;
+            //this.$.loader.active = true;
+        },
+
+        _removeLoader: function () {
+            this.$.spinner.hidden = true;
+            //this.$.loader.active = false;
+        },
+
+        _collapseHide: function () {
+            if (this.$.collapse.classList.contains('active')) {
+                this.$.collapse.classList.remove('active');
+                this.$.toggleBtn.innerHTML = "more";
+            } else {
+                this.$.collapse.classList.add('active');
+                this.$.toggleBtn.innerHTML = "less";
             }
         },
 
-        passengerDetails: {
-            type: Object
+        _stateSelectedChanged: function () {
+            if (this.state === undefined || this.state === null || this.state === "")
+                return;
+            this.notEligibleInsurance = false;
+            this.eligibleInsurance = false;
+
+            this._addLoader();
+            var request = [{
+                "addressOfResidence": {
+                    "country": this.$.country.selectedItem.getAttribute('data-code'),
+                    "state": this.$$('#state').selectedItem.getAttribute('data-code'),
+                },
+                "inventoryId": this.inventoryId
+            }];
+            this.$.insuranceCall.body = JSON.stringify(request);
+            this.$.insuranceCall.url = this.insuranceApi + this.queryParams;
+            this.$.insuranceCall.generateRequest();
+
         },
 
-        fareDetail: {
-            type: Array,
-            value: function() {
-                return []
+
+        validate: function () {
+            var isValid = true;
+            if (this.hasInsurance) {
+                this.fields = this.querySelectorAll('t-input');
+                for (a = 0; a < this.fields.length; a++) {
+                    console.log(this.fields[a])
+                    if (this.fields[a].validate() != undefined) {
+                        isValid = isValid && (this.fields[a].validate() || this.fields[a].hidden);
+                    }
+                }
+                return isValid;
+            } else {
+                return isValid;
             }
         },
 
-        insurance: {
-            type: Object,
-            value: function() {
-                return null;
-            },
-            notify: true
+        _insuranceQuoteChanged: function (event) {
+            if (this._archivedFareDetails == null) {
+                this._archivedFareDetails = this.$.fareDetails.data;
+            }
+
+            this._removeLoader();
+            var response = event.detail.response;
+            if (response.status.isSuccessful && response.quotes && response.quotes.length > 0) {
+                this.eligibleInsurance = true;
+                this.insurance = response.quotes[0].fare.components[0];
+                this.insurance.type = "Insurance";
+                this.insuranceCost = this.insurance.money.currency + " " + this.insurance.money.amount;
+
+                this._createInsuranceData();
+                if (!this.insuranceFareDetails && !this.hasInsurance) {
+                    var component = this;
+                    setTimeout(function () {
+                        component.$$('#hasInsurance').checked = false;
+                        component.$$('#removeInsurance').checked = false;
+                    }, 0);
+
+                }
+            } else {
+                this.notEligibleInsurance = true;
+                this.eligibleInsurance = false;
+            }
         },
 
-        state: {
-            type: String,
-            notify: true,
-            observer: '_stateSelectedChanged'
+        /*This has to refactor*/
+        _deepCopy: function (obj) {
+            return JSON.parse(JSON.stringify(obj));
         },
 
-        hasStates: {
-            type: Boolean,
-            value: false
+        _createInsuranceData: function () {
+            var totalFare;
+
+            this.insuranceFareDetails = this._deepCopy(this._archivedFareDetails);
+
+            totalFare = this.insuranceFareDetails.find(function (fare) {
+                return fare.type.toLowerCase() === 'totalfare';
+            });
+
+            totalFare.money.amount += this.insurance.money.amount;
+            totalFare.money.amount = totalFare.money.amount.toFixed(2);
+            this.insuranceFareDetails.push(this.insurance);
         },
 
-        notEligibleInsurance: {
-            type: Boolean,
-            value: false
-        },
-        countryApi: {
-            type: String,
-            value: "",
-            notify: true
-        },
+        _countryChanged: function () {
+            //this.notEligibleInsurance = true;
+            this.eligibleInsurance = false;
+            this.state = null;
+            this.$.state._setSelectedItem(null);
+            this.$.stateMenu.selected = -1;
 
-        hasInsurance: {
-            type: Boolean,
-            value: false
-        },
-
-        removeInsurance: {
-            type: Boolean,
-            value: false
+            if (this.country !== undefined && this.country !== '') {
+                var countryCode = this.$.country.selectedItem.getAttribute('data-code');
+                this.$.statesCall.url = this.baseGeoApi + '/' + countryCode + '/states' + this.queryParams;
+                this.$.statesCall.generateRequest();
+                this._addLoader();
+            }
         },
 
-        inventoryId: String,
-
-        country: {
-            type: String,
-            notify: true,
-            observer: '_countryChanged'
+        _setCountry: function (countryCode) {
+            var insuranceWidget = this;
+            var countries = [].slice.call(this.$.country.querySelectorAll('paper-item'));
+            countries.forEach(function (item, index) {
+                if (item.getAttribute('data-code').toLowerCase() == countryCode.toLowerCase())
+                    insuranceWidget._countryIndex = index;
+            });
         },
 
-        insuranceFareDetails: {
-            type: Object,
-            value: function() {
-                return null;
-            },
-            notify: true
-
+        _setState: function (stateCode) {
+            var insuranceWidget = this;
+            var states = [].slice.call(insuranceWidget.$$('#state').querySelectorAll('paper-item'));
+            states.forEach(function (item, index) {
+                if (item.getAttribute('data-code').toLowerCase() == stateCode.toLowerCase())
+                    insuranceWidget._stateIndex = index;
+            });
         },
 
-        _archivedFareDetails: Object,
-
-        queryParams: {
-            type: String,
-            notify: true
-        }
-
-    },
-
-    ready: function() {
-        this.$.countryCall.url = this.countryApi + this.queryParams;
-        this.$.countryCall.generateRequest();
-    },
-
-    _addInsurance: function(event) {
-        this.$$('#removeInsurance').checked = false;
-        this.$.fareDetails.data = this.insuranceFareDetails;
-    },
-
-    _removeInsurance: function(event) {
-        this.$$('#hasInsurance').checked = false;
-        this.$.fareDetails.data = this._archivedFareDetails;
-    },
-
-    _addLoader: function() {
-        this.$.spinner.hidden = false;
-        //this.$.loader.active = true;
-    },
-
-    _removeLoader: function() {
-        this.$.spinner.hidden = true;
-        //this.$.loader.active = false;
-    },
-
-    _collapseHide:function(){
-        if(this.$.collapse.classList.contains('active')){
-            this.$.collapse.classList.remove('active');
-            this.$.toggleBtn.innerHTML = "more";
-        }else{
-            this.$.collapse.classList.add('active');
-            this.$.toggleBtn.innerHTML = "less";
-        }
-    },
-
-    _stateSelectedChanged: function() {
-        if (this.state === undefined || this.state === null || this.state === "")
-            return;
-        this.notEligibleInsurance = false;
-        this.eligibleInsurance = false;
-        
-        this._addLoader();
-        var request = [{
-            "addressOfResidence": {
-                "country": this.$.country.selectedItem.getAttribute('data-code'),
-                "state": this.$$('#state').selectedItem.getAttribute('data-code'),
-            },
-            "inventoryId": this.inventoryId
-        }];
-        this.$.insuranceCall.body = JSON.stringify(request);
-        this.$.insuranceCall.url = this.insuranceApi + this.queryParams;
-        this.$.insuranceCall.generateRequest();
-
-    },
+        _statesChanged: function (event) {
+            var widget = this;
+            this.states = event.detail.response;
+            this._removeLoader();
+            this.hasStates = true;
+            this.notEligibleInsurance = false;
+            if (this.states != null && this.states.result.length > 0) {
 
 
-    validate: function() {
-        var isValid = true;
-        if (this.hasInsurance) {
-            this.fields = this.querySelectorAll('t-input');
+            } else {
+                /*this.hasStates = false;
+                this.notEligibleInsurance = true;
+                this.eligibleInsurance = false;*/
+                this.states = {
+                    "result": [{
+                        "key": "International",
+                        "value": "I"
+                    }],
+                    "status": {
+                        "isSuccessful": true,
+                        "code": 200,
+                        "message": "Successful",
+                        "referenceId": "c0c8bbbf-4876-4d11-be45-bd60c2408e4c",
+                        "additionalMessages": []
+                    }
+                };
+                if (this.insuranceFareDetails !== null) {
+                    this.$.fareDetails.data = this._archivedFareDetails;
+                    this.hasInsurance = false;
+                }
+            }
+            setTimeout(function () {
+                widget.fire('states-populated');
+            }, 0);
+        },
+
+        validate: function () {
+            var isValid = true;
+            this.fields = this.querySelectorAll('[name]');
             for (a = 0; a < this.fields.length; a++) {
-                console.log(this.fields[a])
                 if (this.fields[a].validate() != undefined) {
                     isValid = isValid && (this.fields[a].validate() || this.fields[a].hidden);
                 }
             }
             return isValid;
-        } else {
-            return isValid;
-        }
-    },
+        },
 
-    _insuranceQuoteChanged: function(event) {
-        if (this._archivedFareDetails == null) {
-            this._archivedFareDetails = this.$.fareDetails.data;
-        }
+        getAddress: function () {
+            var state = '';
+            var stateElement = this.$$('#state');
+            if (stateElement.is == 't-input')
+                state = stateElement.value;
+            else
+                state = stateElement.selectedItem.getAttribute('data-code');
 
-        this._removeLoader();
-        var response = event.detail.response;
-        if (response.status.isSuccessful && response.quotes && response.quotes.length>0) {
-            this.eligibleInsurance = true;
-            this.insurance = response.quotes[0].fare.components[0];
-            this.insurance.type = "Insurance";
-            this.insuranceCost = this.insurance.money.currency + " " + this.insurance.money.amount;
-
-            this._createInsuranceData();
-            if (!this.insuranceFareDetails && !this.hasInsurance) {
-                var component = this;
-                setTimeout(function() {
-                    component.$$('#hasInsurance').checked = false;
-                    component.$$('#removeInsurance').checked = false;
-                }, 0);
-
-            }
-        } else {
-            this.notEligibleInsurance = true;
-            this.eligibleInsurance = false;
-        }
-    },
-
-    /*This has to refactor*/
-    _deepCopy: function(obj) {
-        return JSON.parse(JSON.stringify(obj));
-    },
-
-    _createInsuranceData: function() {
-        var totalFare;
-
-        this.insuranceFareDetails = this._deepCopy(this._archivedFareDetails);
-
-        totalFare = this.insuranceFareDetails.find(function(fare) {
-            return fare.type.toLowerCase() === 'totalfare';
-        });
-
-        totalFare.money.amount += this.insurance.money.amount;
-        totalFare.money.amount = totalFare.money.amount.toFixed(2);
-        this.insuranceFareDetails.push(this.insurance);
-    },
-
-    _countryChanged: function() {
-        //this.notEligibleInsurance = true;
-        this.eligibleInsurance = false;
-        this.state = null;
-        this.$.state._setSelectedItem(null);
-        this.$.stateMenu.selected = -1;
-        
-        if (this.country !== undefined && this.country !== '') {
-            var countryCode = this.$.country.selectedItem.getAttribute('data-code');
-            this.$.statesCall.url = this.baseGeoApi + '/' + countryCode + '/states' + this.queryParams;
-            this.$.statesCall.generateRequest();
-            this._addLoader();
-        }
-    },
-
-    _setCountryAndState: function(countryCode, stateCode) {
-        var insuranceWidget = this;
-        var countries = [].slice.call(this.$.country.querySelectorAll('paper-item'));
-        countries.forEach(function(item, index) {
-            if (item.getAttribute('data-code').toLowerCase() == countryCode.toLowerCase())
-                insuranceWidget._countryIndex = index;
-        });
-
-        setTimeout(function() {
-            var states = [].slice.call(insuranceWidget.$$('#state').querySelectorAll('paper-item'));
-            states.forEach(function(item, index) {
-                if (item.getAttribute('data-code').toLowerCase() == stateCode.toLowerCase())
-                    insuranceWidget._stateIndex = index;
-            });
-        }, 100);
-
-    },
-
-    _statesChanged: function(event) {
-        this.states = event.detail.response;
-        this._removeLoader();
-        this.hasStates = true;
-        this.notEligibleInsurance = false;
-        if (this.states != null && this.states.result.length > 0) {
-
-
-        } else {
-            /*this.hasStates = false;
-            this.notEligibleInsurance = true;
-            this.eligibleInsurance = false;*/
-            this.states = {
-                "result": [{
-                    "key": "International",
-                    "value": "I"
-                }],
-                "status": {
-                    "isSuccessful": true,
-                    "code": 200,
-                    "message": "Successful",
-                    "referenceId": "c0c8bbbf-4876-4d11-be45-bd60c2408e4c",
-                    "additionalMessages": []
-                }
+            var address = {
+                "addressLine1": this.$$('#addressLine1').value,
+                "addressLine2": this.$$('#addressLine2').value,
+                "city": this.$$('#city').value,
+                "state": state,
+                "country": this.$.country.selectedItem.getAttribute('data-code'),
+                "zip": this.$$('#zip').value,
+                "locationType": ""
             };
-            if (this.insuranceFareDetails !== null) {
-                this.$.fareDetails.data = this._archivedFareDetails;
-                this.hasInsurance = false;
-            }
+            return address;
         }
-    },
-
-    validate: function() {
-        var isValid = true;
-        this.fields = this.querySelectorAll('[name]');
-        for (a = 0; a < this.fields.length; a++) {
-            if (this.fields[a].validate() != undefined) {
-                isValid = isValid && (this.fields[a].validate() || this.fields[a].hidden);
-            }
-        }
-        return isValid;
-    },
-
-    getAddress: function() {
-        var state = '';
-        var stateElement = this.$$('#state');
-        if (stateElement.is == 't-input')
-            state = stateElement.value;
-        else
-            state = stateElement.selectedItem.getAttribute('data-code');
-
-        var address = {
-            "addressLine1": this.$$('#addressLine1').value,
-            "addressLine2": this.$$('#addressLine2').value,
-            "city": this.$$('#city').value,
-            "state": state,
-            "country": this.$.country.selectedItem.getAttribute('data-code'),
-            "zip": this.$$('#zip').value,
-            "locationType": ""
-        };
-        return address;
-    }
 
 
 
-})
+    })
 </script>
