@@ -1,6 +1,6 @@
 {
   "name": "t-itinerary",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "authors": [
     "Rahul Pilkhwal <rahul.pilkhwal@tavisca.com>",
     "Shailesh Kumar Srivastava <ssrivastava@tavisca.com>",
@@ -24,7 +24,7 @@
     "test",
     "tests"
   ],
-  "dependencies": { 
+  "dependencies": {
     "iron-ajax": "PolymerElements/iron-ajax#1.0.0",
     "t-faredetails": "travelnxtElements/t-faredetails#0.0.0",
     "t-radio-button": "atomelements/t-radio-button#0.0.0",
