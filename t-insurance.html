@@ -141,7 +141,7 @@
                 </div>
                 <div class="flex">
                     <div hidden$="{{!hasStates}}">
-                        <t-dropdown-menu label="State" id="state" name="state" required selected-item-label="{{state}}" error-message="You missed this.">
+                        <t-dropdown-menu label="State / Province" id="state" name="state" required selected-item-label="{{state}}" error-message="You missed this.">
                             <paper-menu class="dropdown-content" id="stateMenu" selected="[[_stateIndex]]">
                                 <template is="dom-repeat" items="{{states.result}}">
                                     <paper-item data-code$="{{item.value}}">{{item.key}}</paper-item>
