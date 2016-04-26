@@ -179,7 +179,7 @@
                 </div>
             </div>
         </div>
-        <t-faredetails id="fareDetails" data="[[fareDetail]]" passenger-details="[[passengerDetails]]"></t-faredetails>
+        <t-faredetails id="fareDetails" itinerary-fare-label="[[itineraryFareLabel]]" is-collapsible data="[[fareDetail]]" passenger-details="[[passengerDetails]]"></t-faredetails>
         <iron-ajax id="countryCall" method="GET" verbose headers='{"accept": "application/json"}' handle-as="json" content-type="application/json" on-response="_setCountries"></iron-ajax>
         <iron-ajax id="statesCall" method="GET" verbose headers='{"accept": "application/json"}' handle-as="json" content-type="application/json" on-response="_statesChanged"></iron-ajax>
         <iron-ajax id="insuranceCall" method="POST" verbose headers='{"accept": "application/json"}' handle-as="json" content-type="application/json" on-response="_insuranceQuoteChanged"></iron-ajax>
@@ -294,7 +294,15 @@
             queryParams: {
                 type: String,
                 notify: true
-            }
+            },
+                
+            /**
+             * label for itinerary total fare
+             */            
+            itineraryFareLabel: {
+                type:String,
+                value: 'Itinerary Fare'
+            },
 
         },
 
